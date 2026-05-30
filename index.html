@@ -204,7 +204,24 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webk
 .api-key-input:focus{border-color:var(--blue)}
 .api-saved{font-size:11px;color:var(--green);letter-spacing:1px;margin-top:4px}
 
-/* SETTINGS TAB */
+/* EXPENSES */
+.cat-btn{background:var(--surface2);border:1.5px solid var(--border);border-radius:12px;padding:12px 6px;text-align:center;cursor:pointer;font-size:20px;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:4px}
+.cat-btn span{font-size:9px;color:var(--muted);letter-spacing:1px}
+.cat-btn.selected{border-color:var(--gold);background:rgba(201,168,76,0.1)}
+.cat-btn.selected span{color:var(--gold)}
+.exp-item{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.exp-item:last-child{border-bottom:none}
+.exp-cat{font-size:13px;flex:1}
+.exp-date{font-size:11px;color:var(--muted);margin-right:10px}
+.exp-amt{font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--red)}
+.cat-bar-wrap{margin-bottom:12px}
+.cat-bar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cat-bar-name{font-size:13px}
+.cat-bar-amt{font-size:12px;color:var(--muted);font-family:'Unbounded',sans-serif}
+.cat-bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.cat-bar-fill{height:100%;background:linear-gradient(90deg,var(--red),#e07070);border-radius:2px;transition:width .5s}
+.no-exp{text-align:center;color:var(--muted);font-size:13px;padding:20px}
+
 .settings-item{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer}
 .settings-label{font-size:14px}
 .settings-sub{font-size:11px;color:var(--muted);margin-top:3px}
@@ -304,23 +321,63 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webk
   <div id="clients-list"></div>
 </div>
 
-<!-- CALENDAR -->
+<!-- EXPENSES -->
 <div class="screen" id="screen-cal">
-  <div class="header"><div class="logo">КАЛЕНДАРЬ</div><div class="date-badge" id="sd-cal"></div></div>
-  <div class="card" style="padding:18px">
-    <div class="cal-header">
-      <button class="cal-nav" onclick="calNav(-1)">‹</button>
-      <div class="cal-month-title" id="cal-month-title"></div>
-      <button class="cal-nav" onclick="calNav(1)">›</button>
+  <div class="header"><div class="logo">РАСХОДЫ</div><div class="date-badge" id="sd-cal"></div></div>
+
+  <!-- MONTH SUMMARY -->
+  <div class="card card-gold" style="padding:18px;animation-delay:.05s">
+    <div class="card-title">📊 ЭТОТ МЕСЯЦ</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px">ЗАРАБОТАНО</div>
+        <div id="exp-earned" style="font-family:Unbounded,sans-serif;font-size:22px;font-weight:900;color:var(--green)">0€</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:6px">ПОТРАЧЕНО</div>
+        <div id="exp-spent" style="font-family:Unbounded,sans-serif;font-size:22px;font-weight:900;color:var(--red)">0€</div>
+      </div>
     </div>
-    <div class="cal-grid" id="cal-grid"></div>
-    <div class="cal-events" id="cal-events"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:11px;color:var(--muted)">Баланс месяца</div>
+      <div id="exp-balance" style="font-family:Unbounded,sans-serif;font-size:16px;font-weight:700;color:var(--gold)">0€</div>
+    </div>
+    <div class="goal-bar"><div class="goal-fill" id="exp-bar" style="width:0%"></div></div>
+    <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center" id="exp-bar-lbl">0% от заработка потрачено</div>
   </div>
-  <div class="card" style="padding:18px">
-    <div class="lbl" style="margin-bottom:10px">ДОБАВИТЬ СОБЫТИЕ</div>
-    <input type="text" class="input-field" id="ev-text" placeholder="Название события">
-    <input type="time" class="input-field" id="ev-time" style="margin-bottom:0">
-    <button class="btn btn-gold" onclick="addEvent()" style="margin-top:10px;margin-bottom:0">ДОБАВИТЬ</button>
+
+  <!-- ADD EXPENSE -->
+  <div class="card" style="padding:18px;animation-delay:.1s">
+    <div class="lbl" style="margin-bottom:14px">➕ ДОБАВИТЬ РАСХОД</div>
+    <input type="number" class="input-field" id="exp-amount" placeholder="Сумма €" inputmode="decimal">
+    <div class="lbl" style="margin-bottom:10px">КАТЕГОРИЯ</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px" id="cat-grid">
+      <div class="cat-btn selected" data-cat="🍕 Еда" onclick="pickCat(this)">🍕<br><span>Еда</span></div>
+      <div class="cat-btn" data-cat="🚇 Транспорт" onclick="pickCat(this)">🚇<br><span>Транспорт</span></div>
+      <div class="cat-btn" data-cat="🛍 Покупки" onclick="pickCat(this)">🛍<br><span>Покупки</span></div>
+      <div class="cat-btn" data-cat="🏠 Жильё" onclick="pickCat(this)">🏠<br><span>Жильё</span></div>
+      <div class="cat-btn" data-cat="💊 Здоровье" onclick="pickCat(this)">💊<br><span>Здоровье</span></div>
+      <div class="cat-btn" data-cat="🎮 Развлечения" onclick="pickCat(this)">🎮<br><span>Развлечения</span></div>
+      <div class="cat-btn" data-cat="📱 Подписки" onclick="pickCat(this)">📱<br><span>Подписки</span></div>
+      <div class="cat-btn" data-cat="💪 Спорт" onclick="pickCat(this)">💪<br><span>Спорт</span></div>
+      <div class="cat-btn" data-cat="📦 Другое" onclick="pickCat(this)">📦<br><span>Другое</span></div>
+    </div>
+    <button class="btn btn-gold" onclick="addExpense()" style="margin-bottom:0">ПОДТВЕРДИТЬ ✓</button>
+  </div>
+
+  <!-- CATEGORY BREAKDOWN -->
+  <div class="card" style="padding:18px;animation-delay:.15s">
+    <div class="lbl" style="margin-bottom:14px">📈 ПО КАТЕГОРИЯМ</div>
+    <div id="cat-breakdown"></div>
+  </div>
+
+  <!-- EXPENSE LIST -->
+  <div class="card" style="padding:18px;animation-delay:.2s">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="lbl" style="margin-bottom:0">ПОСЛЕДНИЕ РАСХОДЫ</div>
+      <button onclick="clearExpenses()" style="background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:1px">ОЧИСТИТЬ</button>
+    </div>
+    <div id="exp-list"></div>
   </div>
 </div>
 
@@ -366,7 +423,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webk
   <button class="nav-btn active" onclick="nav('morning',this)"><div class="nav-icon">☀️</div>УТРО</button>
   <button class="nav-btn" onclick="nav('day',this)"><div class="nav-icon">✅</div>ДЕНЬ</button>
   <button class="nav-btn" onclick="nav('clients',this)"><div class="nav-icon">👥</div>CRM</button>
-  <button class="nav-btn" onclick="nav('cal',this)"><div class="nav-icon">📅</div>ПЛАН</button>
+  <button class="nav-btn" onclick="nav('cal',this)"><div class="nav-icon">💸</div>РАСХОДЫ</button>
   <button class="nav-btn" onclick="nav('year',this)"><div class="nav-icon">🎯</div>ГОД</button>
   <button class="nav-btn" onclick="nav('motive',this)"><div class="nav-icon">🔥</div>СИЛА</button>
 </div>
@@ -378,7 +435,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;-webk
 // ═══════════════════════════════
 // STATE + STORAGE
 // ═══════════════════════════════
-var DEF={hours:5,mood:null,tasks:[],taskHistory:[],totalEarned:0,totalSites:0,streak:0,lastActive:null,monthlyEarnings:{},clients:[],clientType:'lovable',events:{},apiKey:''};
+var DEF={hours:5,mood:null,tasks:[],taskHistory:[],totalEarned:0,totalSites:0,streak:0,lastActive:null,monthlyEarnings:{},clients:[],clientType:'lovable',events:{},apiKey:'',expenses:[]};
 var S=Object.assign({},DEF);
 
 function load(){try{var r=localStorage.getItem('lub_v4');if(r)S=Object.assign({},DEF,JSON.parse(r));}catch(e){}}
@@ -403,7 +460,7 @@ function initAll(){
   document.getElementById('ab-m').innerHTML=adaptBanner();
   if(S.tasks&&S.tasks.length>0){renderTasks();updateStats();}
   renderClients();
-  initCal();
+  renderExpenses();
 }
 
 // ═══════════════════════════════
@@ -643,63 +700,72 @@ function renderClients(){
 }
 
 // ═══════════════════════════════
-// CALENDAR
+// EXPENSES
 // ═══════════════════════════════
-var calDate=new Date();calDate.setDate(1);
-var selDate=dateKey(new Date());
+var selCat='🍕 Еда';
 
-function initCal(){renderCal();}
-
-function calNav(dir){calDate.setMonth(calDate.getMonth()+dir);renderCal();}
-
-function renderCal(){
-  var year=calDate.getFullYear(),month=calDate.getMonth();
-  var monthNames=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  document.getElementById('cal-month-title').textContent=monthNames[month]+' '+year;
-  var grid=document.getElementById('cal-grid');grid.innerHTML='';
-  var days=['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
-  days.forEach(function(d){var el=document.createElement('div');el.className='cal-day-name';el.textContent=d;grid.appendChild(el);});
-  var first=new Date(year,month,1).getDay();first=(first===0)?6:first-1;
-  for(var i=0;i<first;i++){var el=document.createElement('div');el.className='cal-day empty';grid.appendChild(el);}
-  var daysInMonth=new Date(year,month+1,0).getDate();
-  var todayKey=dateKey(new Date());
-  for(var d=1;d<=daysInMonth;d++){
-    var dk=year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    var el=document.createElement('div');el.className='cal-day';el.textContent=d;
-    if(dk===todayKey)el.classList.add('today');
-    if(dk===selDate)el.classList.add('selected');
-    var evs=S.events&&S.events[dk];
-    if(evs&&evs.length>0)el.classList.add('has-event');
-    (function(dkey){el.addEventListener('click',function(){selDate=dkey;renderCal();renderEvents();});})(dk);
-    grid.appendChild(el);
-  }
-  renderEvents();
+function pickCat(el){
+  document.querySelectorAll('.cat-btn').forEach(function(b){b.classList.remove('selected');});
+  el.classList.add('selected');
+  selCat=el.dataset.cat;
 }
 
-function renderEvents(){
-  var cont=document.getElementById('cal-events');cont.innerHTML='';
-  var evs=(S.events&&S.events[selDate])||[];
-  if(evs.length===0){
-    var empty=document.createElement('div');empty.style.cssText='text-align:center;color:var(--muted);font-size:13px;padding:16px';empty.textContent='Нет событий на этот день';cont.appendChild(empty);return;
-  }
-  evs.forEach(function(ev,i){
-    var item=document.createElement('div');item.className='cal-event-item';
-    item.innerHTML='<div class="cal-event-dot" style="background:var(--gold)"></div><div class="cal-event-text">'+ev.text+'</div><div class="cal-event-time">'+(ev.time||'')+'</div><button onclick="delEvent(\''+selDate+'\','+i+')" style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer">×</button>';
-    cont.appendChild(item);
+function addExpense(){
+  var amt=parseFloat(document.getElementById('exp-amount').value)||0;
+  if(amt<=0){showToast('Введи сумму 💸','');return;}
+  if(!S.expenses)S.expenses=[];
+  S.expenses.unshift({id:Date.now(),amount:amt,cat:selCat,date:new Date().toLocaleDateString('ru-RU'),month:monthKey()});
+  document.getElementById('exp-amount').value='';
+  save();renderExpenses();showToast('-'+amt+'€ добавлено','');
+}
+
+function clearExpenses(){
+  if(!confirm('Очистить все расходы этого месяца?'))return;
+  var cur=monthKey();
+  S.expenses=(S.expenses||[]).filter(function(e){return e.month!==cur;});
+  save();renderExpenses();showToast('Очищено','');
+}
+
+function renderExpenses(){
+  if(!S.expenses)S.expenses=[];
+  var cur=monthKey();
+  var monthExp=S.expenses.filter(function(e){return e.month===cur;});
+  var totalSpent=monthExp.reduce(function(s,e){return s+(e.amount||0);},0);
+  var earned=S.monthlyEarnings[cur]||0;
+  var balance=earned-totalSpent;
+  var pct=earned>0?Math.min(totalSpent/earned*100,100):0;
+
+  document.getElementById('exp-earned').textContent=earned.toLocaleString()+'€';
+  document.getElementById('exp-spent').textContent=totalSpent.toLocaleString()+'€';
+  document.getElementById('exp-balance').textContent=(balance>=0?'+':'')+balance.toLocaleString()+'€';
+  document.getElementById('exp-balance').style.color=balance>=0?'var(--green)':'var(--red)';
+  document.getElementById('exp-bar').style.width=pct+'%';
+  document.getElementById('exp-bar-lbl').textContent=Math.round(pct)+'% от заработка потрачено';
+
+  // Category breakdown
+  var cats={};
+  monthExp.forEach(function(e){cats[e.cat]=(cats[e.cat]||0)+e.amount;});
+  var breakdown=document.getElementById('cat-breakdown');
+  if(Object.keys(cats).length===0){breakdown.innerHTML='<div class="no-exp">Расходов пока нет 😊</div>';return;}
+  breakdown.innerHTML='';
+  var sorted=Object.keys(cats).sort(function(a,b){return cats[b]-cats[a];});
+  sorted.forEach(function(cat){
+    var amt=cats[cat],p=totalSpent>0?Math.round(amt/totalSpent*100):0;
+    var wrap=document.createElement('div');wrap.className='cat-bar-wrap';
+    wrap.innerHTML='<div class="cat-bar-top"><div class="cat-bar-name">'+cat+'</div><div class="cat-bar-amt">'+amt.toLocaleString()+'€ · '+p+'%</div></div><div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+p+'%"></div></div>';
+    breakdown.appendChild(wrap);
+  });
+
+  // List
+  var list=document.getElementById('exp-list');
+  if(monthExp.length===0){list.innerHTML='<div class="no-exp">Добавь первый расход 👆</div>';return;}
+  list.innerHTML='';
+  monthExp.slice(0,20).forEach(function(e){
+    var item=document.createElement('div');item.className='exp-item';
+    item.innerHTML='<div class="exp-cat">'+e.cat+'</div><div class="exp-date">'+e.date+'</div><div class="exp-amt">-'+e.amount+'€</div>';
+    list.appendChild(item);
   });
 }
-
-function addEvent(){
-  var text=document.getElementById('ev-text').value.trim(),time=document.getElementById('ev-time').value;
-  if(!text){showToast('Введи название события','');return;}
-  if(!S.events)S.events={};
-  if(!S.events[selDate])S.events[selDate]=[];
-  S.events[selDate].push({text:text,time:time});
-  document.getElementById('ev-text').value='';document.getElementById('ev-time').value='';
-  save();renderCal();showToast('Событие добавлено! 📅','gold');
-}
-
-function delEvent(dk,idx){S.events[dk].splice(idx,1);save();renderCal();}
 
 // ═══════════════════════════════
 // MOTIVATION
@@ -749,7 +815,7 @@ function nav(name,btn){
   if(name==='motive')updateMotive();
   if(name==='year')updateAll();
   if(name==='clients')renderClients();
-  if(name==='cal')renderCal();
+  if(name==='cal')renderExpenses();
 }
 
 // ═══════════════════════════════
